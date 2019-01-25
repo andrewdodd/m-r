@@ -18,7 +18,10 @@ func (r *InventoryCommandHandlers) HandleDeactivateInventoryItem(m Command) erro
 	message := m.(DeactivateInventoryItem)
 	ar, _ := r.repo.GetById(message.InventoryItemId)
 	item := ar.(*InventoryItem)
-	item.Deactivate()
+	err := item.Deactivate()
+	if err != nil {
+		return err
+	}
 	return r.repo.Save(item, message.OriginalVersion)
 }
 
@@ -26,7 +29,10 @@ func (r *InventoryCommandHandlers) HandleRemoveItemsFromInventory(m Command) err
 	message := m.(RemoveItemsFromInventory)
 	ar, _ := r.repo.GetById(message.InventoryItemId)
 	item := ar.(*InventoryItem)
-	item.Remove(message.Count)
+	err := item.Remove(message.Count)
+	if err != nil {
+		return err
+	}
 	return r.repo.Save(item, message.OriginalVersion)
 }
 
@@ -34,7 +40,10 @@ func (r *InventoryCommandHandlers) HandleCheckInItemsToInventory(m Command) erro
 	message := m.(CheckInItemsToInventory)
 	ar, _ := r.repo.GetById(message.InventoryItemId)
 	item := ar.(*InventoryItem)
-	item.CheckIn(message.Count)
+	err := item.CheckIn(message.Count)
+	if err != nil {
+		return err
+	}
 	return r.repo.Save(item, message.OriginalVersion)
 }
 
@@ -42,6 +51,9 @@ func (r *InventoryCommandHandlers) HandleRenameInventoryItem(m Command) error {
 	message := m.(RenameInventoryItem)
 	ar, _ := r.repo.GetById(message.InventoryItemId)
 	item := ar.(*InventoryItem)
-	item.ChangeName(message.NewName)
+	err := item.ChangeName(message.NewName)
+	if err != nil {
+		return err
+	}
 	return r.repo.Save(item, message.OriginalVersion)
 }
