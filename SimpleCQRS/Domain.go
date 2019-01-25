@@ -6,13 +6,6 @@ import (
 
 type Guid string
 
-type AggRoot struct {
-	changes    []Event
-	_version   int
-	id         Guid
-	InnerApply func(e Event) error
-}
-
 type AggregateRoot interface {
 	Id() Guid
 	GetUncommittedChanges() []Event
@@ -22,82 +15,18 @@ type AggregateRoot interface {
 	ApplyChangeInternal(e Event, isNew bool) error
 }
 
-type EventApplier interface {
-	HandleEvent(e Event) error
-}
-
-func Apply(ea EventApplier, evt Event) error {
-	return ea.HandleEvent(evt)
-}
-
-type InventoryItem struct {
-	AggRoot
-	activated bool
-}
-
-/*
-public InventoryItem(Guid id, string name)
-{
-	ApplyChange(new InventoryItemCreated(id, name));
-}
-*/
-// used to create in repository ... many ways to avoid this, eg making private constructor
-func NewEmptyInventoryItem() *InventoryItem {
-	i := &(InventoryItem{
-		AggRoot: NewEmptyAggRoot(),
-	})
-	i.AggRoot.InnerApply = i.HandleEvent
-	return i
+type AggRoot struct {
+	changes    []Event
+	_version   int
+	id         Guid
+	InnerApply func(e Event) error
 }
 
 func NewEmptyAggRoot() AggRoot {
 	ag := AggRoot{
-		changes:  make([]Event, 0),
-		_version: -1,
+		changes: make([]Event, 0),
 	}
 	return ag
-}
-
-func NewInventoryItem(id Guid, name string) *InventoryItem {
-	i := NewEmptyInventoryItem()
-	i.ApplyChange(NewInventoryItemCreated(id, name))
-	return i
-}
-
-func (ii *InventoryItem) ChangeName(newName string) error {
-	if newName == "" {
-		return errors.New("newName cannot be empty")
-	}
-	ii.AggRoot.ApplyChange(NewInventoryItemRenamed(ii.id, newName))
-	return nil
-}
-
-func (ii *InventoryItem) Remove(count int) error {
-	if count <= 0 {
-		return errors.New("cannot remove negative count from inventory")
-	}
-	ii.AggRoot.ApplyChange(NewItemsRemovedFromInventory(ii.id, count))
-	return nil
-}
-
-func (ii *InventoryItem) CheckIn(count int) error {
-	if count <= 0 {
-		return errors.New("must have a count greater than 0 to add to inventory")
-	}
-	ii.AggRoot.ApplyChange(NewItemsCheckedInToInventory(ii.id, count))
-	return nil
-}
-
-func (ii *InventoryItem) Deactivate() error {
-	if !ii.activated {
-		return errors.New("already deactivated")
-	}
-	ii.AggRoot.ApplyChange(NewInventoryItemDeactivated(ii.id))
-	return nil
-}
-
-func (ii *InventoryItem) Id() Guid {
-	return ii.id
 }
 
 func (ag *AggRoot) Id() Guid {
@@ -142,6 +71,58 @@ func (ag *AggRoot) ApplyChangeInternal(e Event, isNew bool) error {
 	if isNew {
 		ag.changes = append(ag.changes, e)
 	}
+	return nil
+}
+
+type InventoryItem struct {
+	AggRoot
+	activated bool
+}
+
+// used to create in repository ... many ways to avoid this, eg making private constructor
+func NewEmptyInventoryItem() *InventoryItem {
+	i := &(InventoryItem{
+		AggRoot: NewEmptyAggRoot(),
+	})
+	i.AggRoot.InnerApply = i.HandleEvent
+	return i
+}
+
+func NewInventoryItem(id Guid, name string) *InventoryItem {
+	i := NewEmptyInventoryItem()
+	i.ApplyChange(NewInventoryItemCreated(id, name))
+	return i
+}
+
+func (ii *InventoryItem) ChangeName(newName string) error {
+	if newName == "" {
+		return errors.New("newName cannot be empty")
+	}
+	ii.AggRoot.ApplyChange(NewInventoryItemRenamed(ii.id, newName))
+	return nil
+}
+
+func (ii *InventoryItem) Remove(count int) error {
+	if count <= 0 {
+		return errors.New("cannot remove negative count from inventory")
+	}
+	ii.AggRoot.ApplyChange(NewItemsRemovedFromInventory(ii.id, count))
+	return nil
+}
+
+func (ii *InventoryItem) CheckIn(count int) error {
+	if count <= 0 {
+		return errors.New("must have a count greater than 0 to add to inventory")
+	}
+	ii.AggRoot.ApplyChange(NewItemsCheckedInToInventory(ii.id, count))
+	return nil
+}
+
+func (ii *InventoryItem) Deactivate() error {
+	if !ii.activated {
+		return errors.New("already deactivated")
+	}
+	ii.AggRoot.ApplyChange(NewInventoryItemDeactivated(ii.id))
 	return nil
 }
 
