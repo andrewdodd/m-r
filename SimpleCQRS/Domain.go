@@ -12,14 +12,13 @@ type AggregateRoot interface {
 	MarkChangesAsCommitted()
 	LoadsFromHistory(history []Event) error
 	ApplyChange(e Event) error
-	ApplyChangeInternal(e Event, isNew bool) error
 }
 
 type AggRoot struct {
 	changes    []Event
 	_version   int
 	id         Guid
-	InnerApply func(e Event) error
+	InnerApply func(e Event) error // Needs public scope
 }
 
 func NewEmptyAggRoot() AggRoot {
@@ -50,7 +49,7 @@ func (ag *AggRoot) MarkChangesAsCommitted() {
 
 func (ag *AggRoot) LoadsFromHistory(history []Event) error {
 	for _, e := range history {
-		err := ag.ApplyChangeInternal(e, false)
+		err := ag.applyChangeInternal(e, false)
 		if err != nil {
 			return err
 		}
@@ -59,11 +58,11 @@ func (ag *AggRoot) LoadsFromHistory(history []Event) error {
 }
 
 func (ag *AggRoot) ApplyChange(e Event) error {
-	return ag.ApplyChangeInternal(e, true)
+	return ag.applyChangeInternal(e, true)
 }
 
 // push atomic aggregate changes to local history for further processing (EventStore.SaveEvents)
-func (ag *AggRoot) ApplyChangeInternal(e Event, isNew bool) error {
+func (ag *AggRoot) applyChangeInternal(e Event, isNew bool) error {
 	err := ag.InnerApply(e)
 	if err != nil {
 		return err
@@ -84,7 +83,7 @@ func NewEmptyInventoryItem() *InventoryItem {
 	i := &(InventoryItem{
 		AggRoot: NewEmptyAggRoot(),
 	})
-	i.AggRoot.InnerApply = i.HandleEvent
+	i.AggRoot.InnerApply = i.handleEvent
 	return i
 }
 
@@ -98,7 +97,7 @@ func (ii *InventoryItem) ChangeName(newName string) error {
 	if newName == "" {
 		return errors.New("newName cannot be empty")
 	}
-	ii.AggRoot.ApplyChange(NewInventoryItemRenamed(ii.id, newName))
+	ii.ApplyChange(NewInventoryItemRenamed(ii.id, newName))
 	return nil
 }
 
@@ -106,7 +105,7 @@ func (ii *InventoryItem) Remove(count int) error {
 	if count <= 0 {
 		return errors.New("cannot remove negative count from inventory")
 	}
-	ii.AggRoot.ApplyChange(NewItemsRemovedFromInventory(ii.id, count))
+	ii.ApplyChange(NewItemsRemovedFromInventory(ii.id, count))
 	return nil
 }
 
@@ -114,7 +113,7 @@ func (ii *InventoryItem) CheckIn(count int) error {
 	if count <= 0 {
 		return errors.New("must have a count greater than 0 to add to inventory")
 	}
-	ii.AggRoot.ApplyChange(NewItemsCheckedInToInventory(ii.id, count))
+	ii.ApplyChange(NewItemsCheckedInToInventory(ii.id, count))
 	return nil
 }
 
@@ -122,11 +121,11 @@ func (ii *InventoryItem) Deactivate() error {
 	if !ii.activated {
 		return errors.New("already deactivated")
 	}
-	ii.AggRoot.ApplyChange(NewInventoryItemDeactivated(ii.id))
+	ii.ApplyChange(NewInventoryItemDeactivated(ii.id))
 	return nil
 }
 
-func (ii *InventoryItem) HandleEvent(event Event) error {
+func (ii *InventoryItem) handleEvent(event Event) error {
 	switch e := event.(type) {
 	case InventoryItemCreated:
 		ii.id = e.Id()
