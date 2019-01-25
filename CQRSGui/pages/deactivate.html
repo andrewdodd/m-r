@@ -1,0 +1,26 @@
+<%@ Page Title="" Language="C#" Inherits="System.Web.Mvc.ViewPage<SimpleCQRS.InventoryItemDetailsDto>" MasterPageFile="~/Views/Shared/Site.Master" %>
+<asp:Content runat="server" ID="Title" ContentPlaceHolderID="TitleContent"></asp:Content>
+<asp:Content runat="server" ID="Main" ContentPlaceHolderID="MainContent">
+        <% using (Html.BeginForm())
+       {%>
+        <%: Html.Hidden("Id",Model.Id) %>
+        <%: Html.Hidden("Version",Model.Version) %>
+    Deactivate &quot;<%: Model.Name %>&quot; (Version: <%: Model.Version %>)?
+        <button name="submit">Submit</button>
+
+    <%
+       }%>
+
+</asp:Content>
+
+{{define "title"}}Deactivate{{end}}
+
+{{define "mainContent"}}
+<h2>Deactivate</h2>
+<form method="POST">
+  <input type="text" name="id" hidden value="{{.Id}}">
+  <input type="text" name="version" hidden value="{{.Version}}">
+  <label>Deactivate "{{.Name}} (version: {{.Version}})":</label>?
+  <input type="submit">Submit</input>
+</form>
+{{end}}

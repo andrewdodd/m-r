@@ -1,0 +1,12 @@
+{{define "title"}}Check in{{end}}
+
+{{define "mainContent"}}
+<h2>Check in</h2>
+<form method="POST">
+  <input type="text" name="id" hidden value="{{.Id}}">
+  <input type="text" name="version" hidden value="{{.Version}}">
+  <label>Name:</label><br />
+  <input type="text" name="number" value="0"><br />
+  <input type="submit">Submit</input>
+</form>
+{{end}}

@@ -1,0 +1,28 @@
+{{define "base"}}<html>
+    <head>
+        <link href="../../Content/Site.css" rel="stylesheet" type="text/css" />
+        <title>{{template "title" .}}</title>
+    </head>
+    <body>
+        <div class="page">
+            <div id="header">
+                <div id="title">
+                    <h1>The mår bestest UI ever</h1>
+                </div>
+
+                <div id="logindisplay" />
+
+                <div id="menucontainer">
+                    <ul id="menu">              
+                        <li><a href="/">Home</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div id="main">
+                {{template "mainContent" .}}
+                <div id="footer" />
+            </div>
+        </div>
+    </body>
+</html>{{end}}

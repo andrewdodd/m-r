@@ -1,0 +1,12 @@
+{{define "title"}}Change Name{{end}}
+
+{{define "mainContent"}}
+<h2>Change Name</h2>
+<form method="POST">
+  <input type="text" name="id" hidden value="{{.Id}}">
+  <input type="text" name="version" hidden value="{{.Version}}">
+  <label>Name:</label><br />
+  <input type="text" name="name" value="{{.Name}}"><br />
+  <input type="submit">Submit</input>
+</form>
+{{end}}

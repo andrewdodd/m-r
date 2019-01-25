@@ -1,0 +1,14 @@
+{{define "title"}}Details{{end}}
+
+{{define "mainContent"}}
+  <h2>Details:</h2>
+  Id: {{.Model.Id}}<br />
+  Name: {{.Model.Name}}<br />
+  Count: {{.Model.CurrentCount }}<br /><br />
+
+    <a href="/details/{{.Model.Id}}/changename">Rename</a><br />
+    <a href="/details/{{.Model.Id}}/deactivate">Deactivate</a><br />
+    <a href="/details/{{.Model.Id}}/checkin">Check in</a><br />
+    <a href="/details/{{.Model.Id}}/remove">Remove</a><br />
+
+{{end}}

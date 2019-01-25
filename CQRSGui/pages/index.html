@@ -1,0 +1,14 @@
+﻿{{define "title"}}Home Page{{end}}
+{{define "mainContent"}}
+    <h2>All items:</h2>
+
+
+    <ul>
+    {{range .InventoryItems}}
+    <li><a href="/details/{{.Id}}">Name: {{.Name}}</a></li>
+    {{end}}
+    </ul>
+
+    <a href="/add">Add</a>
+
+{{end}}
