@@ -1,6 +1,6 @@
 # Golang m-r
 
-A golang port of the Simple CQRS example
+A golang port of Greg Young's [Simple CQRS example](https://github.com/gregoryyoung/m-r)
 
 Run:
 
