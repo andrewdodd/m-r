@@ -1,6 +1,8 @@
 package SimpleCQRS
 
-import "errors"
+import (
+	"fmt"
+)
 
 type EventStore interface {
 	SaveEvents(aggregateId Guid, events []Event, expectedVersion int) error
@@ -31,7 +33,7 @@ func (e *es) SaveEvents(aggregateId Guid, events []Event, expectedVersion int) e
 	} else if expectedVersion != -1 {
 		lastEvent := eventDescriptors[len(eventDescriptors)-1]
 		if lastEvent.data.Version() != expectedVersion {
-			return errors.New("Concurrency Error")
+			return fmt.Errorf("concurrency error, expected version %v, but found %v", expectedVersion, lastEvent.data.Version())
 		}
 	}
 
@@ -60,7 +62,7 @@ func (e *es) GetEventsForAggregate(aggregateId Guid) ([]Event, error) {
 	eventDescriptors, ok := e.current[aggregateId]
 
 	if !ok {
-		return nil, errors.New("Aggregate not found")
+		return nil, fmt.Errorf("aggregate not found for id: %v", aggregateId)
 	}
 	events := make([]Event, len(eventDescriptors))
 
