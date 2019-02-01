@@ -1,5 +1,9 @@
 package SimpleCQRS
 
+import (
+	"time"
+)
+
 type InventoryCommandHandlers struct {
 	repo InventoryItemRepository
 }
@@ -52,6 +56,7 @@ func (r *InventoryCommandHandlers) HandleRenameInventoryItem(m Command) error {
 	ar, _ := r.repo.GetById(message.InventoryItemId)
 	item := ar.(*InventoryItem)
 	err := item.ChangeName(message.NewName)
+	time.Sleep(10 * time.Second) // Name changes take ages, not sure why
 	if err != nil {
 		return err
 	}
