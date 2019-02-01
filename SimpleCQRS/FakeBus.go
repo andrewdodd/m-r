@@ -2,6 +2,7 @@ package SimpleCQRS
 
 import (
 	"errors"
+	"fmt"
 	"math/rand"
 	"reflect"
 	"time"
@@ -11,16 +12,49 @@ type CommandHandler func(cmd Command) error
 type EventProcessor func(cmd Event) error
 
 type FakeBus struct {
+	commandQueue    chan queuedCommand
 	commandHandlers map[reflect.Type]CommandHandler
 	eventProcessors map[reflect.Type][]EventProcessor
 	induceDelay     bool
 }
 
+type queuedCommand struct {
+	cmd                 Command
+	synchronousResponse chan CommandProcessingError
+}
+
 func NewFakeBus(induceDelay bool) *FakeBus {
-	return &FakeBus{
+	fb := &FakeBus{
+		commandQueue:    make(chan queuedCommand),
 		commandHandlers: make(map[reflect.Type]CommandHandler),
 		eventProcessors: make(map[reflect.Type][]EventProcessor),
 		induceDelay:     induceDelay,
+	}
+
+	go fb.processCommands()
+	return fb
+}
+
+func (fb *FakeBus) processCommands() {
+	for {
+		select {
+		case cmdReq := <-fb.commandQueue:
+			cmd := cmdReq.cmd
+			fmt.Println("Processing command:", cmd)
+			resp := cmdReq.synchronousResponse
+			handler, _ := fb.commandHandlers[reflect.TypeOf(cmd)]
+
+			if fb.induceDelay {
+				time.Sleep(time.Duration(1+rand.Intn(3)) * time.Second) // Have possible command race conditions too
+			}
+
+			result := handler(cmd)
+			fmt.Println("Processed command, result:", result)
+			select {
+			case resp <- result:
+			default:
+			}
+		}
 	}
 }
 
@@ -47,12 +81,11 @@ func (fb *FakeBus) AddEventProcessor(eventType reflect.Type, processor EventProc
 	return nil
 }
 
-func (fb *FakeBus) Dispatch(cmd Command) error {
-	if handler, ok := fb.commandHandlers[reflect.TypeOf(cmd)]; ok {
-		if fb.induceDelay {
-			time.Sleep(time.Duration(1+rand.Intn(3)) * time.Second) // Have possible command race conditions too
-		}
-		return handler(cmd)
+func (fb *FakeBus) Dispatch(cmd Command, syncResp chan CommandProcessingError) CommandSubmissionError {
+	if _, ok := fb.commandHandlers[reflect.TypeOf(cmd)]; ok {
+		fmt.Println("Queuing command:", cmd)
+		fb.commandQueue <- queuedCommand{cmd, syncResp}
+		return nil
 	}
 	return errors.New("no handler registered")
 }
@@ -72,8 +105,12 @@ func (fb *FakeBus) Publish(evt Event) error {
 	return errors.New("no processor registered")
 }
 
+type CommandProcessingError error
+type CommandSubmissionError error
+
 type CommandDispatcher interface {
-	Dispatch(e Command) error
+	Dispatch(e Command,
+		synchronousResponse chan CommandProcessingError) CommandSubmissionError
 }
 
 type EventPublisher interface {

@@ -78,7 +78,7 @@ func addHandler(w http.ResponseWriter, r *http.Request) {
 		//fmt.Fprintf(w, "Post from website! r.PostFrom = %v\n", r.PostForm)
 		name := r.FormValue("name")
 		bus := getBus(r)
-		err := bus.Dispatch(s.CreateInventoryItem{InventoryItemId: s.NewGuid(), Name: name})
+		err := bus.Dispatch(s.CreateInventoryItem{InventoryItemId: s.NewGuid(), Name: name}, nil)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -120,11 +120,28 @@ func changeNameHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		version := int(v)
+
+		wait_for_success := r.FormValue("wait_for_success")
+		var waitForSuccess chan s.CommandProcessingError = nil
+		if wait_for_success != "" {
+			waitForSuccess = make(chan s.CommandProcessingError)
+		}
+
 		bus := getBus(r)
-		err = bus.Dispatch(s.RenameInventoryItem{ii.Id, version, name})
+		err = bus.Dispatch(s.RenameInventoryItem{ii.Id, version, name}, waitForSuccess)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
+		}
+
+		if waitForSuccess != nil {
+			err = <-waitForSuccess
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+		} else {
+			fmt.Println("Not waiting around!")
 		}
 		http.Redirect(w, r, "/", http.StatusFound)
 	default:
@@ -167,7 +184,7 @@ func checkinHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		bus := getBus(r)
-		err = bus.Dispatch(s.CheckInItemsToInventory{ii.Id, version, number})
+		err = bus.Dispatch(s.CheckInItemsToInventory{ii.Id, version, number}, nil)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -213,7 +230,7 @@ func removeHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		bus := getBus(r)
-		err = bus.Dispatch(s.RemoveItemsFromInventory{ii.Id, version, number})
+		err = bus.Dispatch(s.RemoveItemsFromInventory{ii.Id, version, number}, nil)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -254,7 +271,7 @@ func deactivateHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		bus := getBus(r)
-		err = bus.Dispatch(s.DeactivateInventoryItem{s.Guid(id), version})
+		err = bus.Dispatch(s.DeactivateInventoryItem{s.Guid(id), version}, nil)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -308,7 +325,7 @@ func setupCQRS(mimicEventualConsistency bool) (s.ReadModel, s.CommandDispatcher)
 	bus.AddEventProcessor(reflect.TypeOf(s.InventoryItemDeactivated{}), list.ProcessInventoryItemDeactivated)
 
 	id := s.NewGuid()
-	bus.Dispatch(s.CreateInventoryItem{id, "The self-seed inventory item"})
+	bus.Dispatch(s.CreateInventoryItem{id, "The self-seed inventory item"}, nil)
 	rmf := s.NewReadModelFacade(&bsdb)
 	fmt.Println("Returning facade")
 	return &rmf, bus
