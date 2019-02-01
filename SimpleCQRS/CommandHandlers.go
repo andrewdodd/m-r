@@ -55,8 +55,8 @@ func (r *InventoryCommandHandlers) HandleRenameInventoryItem(m Command) error {
 	message := m.(RenameInventoryItem)
 	ar, _ := r.repo.GetById(message.InventoryItemId)
 	item := ar.(*InventoryItem)
-	err := item.ChangeName(message.NewName)
 	time.Sleep(10 * time.Second) // Name changes take ages, not sure why
+	err := item.ChangeName(message.NewName)
 	if err != nil {
 		return err
 	}
