@@ -37,7 +37,7 @@ func getReadModel(r *http.Request) s.ReadModel {
 	return r.Context().Value("readmodel").(s.ReadModel)
 }
 
-func addBus(bus *s.FakeBus) func(next http.Handler) http.Handler {
+func addBus(bus s.CommandDispatcher) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := context.WithValue(r.Context(), "bus", bus)
@@ -46,8 +46,8 @@ func addBus(bus *s.FakeBus) func(next http.Handler) http.Handler {
 	}
 }
 
-func getBus(r *http.Request) *s.FakeBus {
-	return r.Context().Value("bus").(*s.FakeBus)
+func getBus(r *http.Request) s.CommandDispatcher {
+	return r.Context().Value("bus").(s.CommandDispatcher)
 }
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
@@ -281,7 +281,7 @@ func detailsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func setupCQRS(mimicEventualConsistency bool) (s.ReadModel, *s.FakeBus) {
+func setupCQRS(mimicEventualConsistency bool) (s.ReadModel, s.CommandDispatcher) {
 
 	bus := s.NewFakeBus(mimicEventualConsistency)
 	storage := s.NewEventStore(bus)
