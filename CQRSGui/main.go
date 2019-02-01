@@ -284,7 +284,7 @@ func detailsHandler(w http.ResponseWriter, r *http.Request) {
 func setupCQRS(mimicEventualConsistency bool) (s.ReadModel, *s.FakeBus) {
 
 	bus := s.NewFakeBus(mimicEventualConsistency)
-	storage := s.NewEventStore(&bus)
+	storage := s.NewEventStore(bus)
 	rep := s.InventoryItemRepository{storage}
 	commands := s.NewInventoryCommandHandlers(rep)
 	bus.SetCommandHandler(reflect.TypeOf(s.CheckInItemsToInventory{}), commands.HandleCheckInItemsToInventory)
@@ -310,7 +310,8 @@ func setupCQRS(mimicEventualConsistency bool) (s.ReadModel, *s.FakeBus) {
 	id := s.NewGuid()
 	bus.Dispatch(s.CreateInventoryItem{id, "The self-seed inventory item"})
 	rmf := s.NewReadModelFacade(&bsdb)
-	return &rmf, &bus
+	fmt.Println("Returning facade")
+	return &rmf, bus
 }
 
 func buildTemplates() map[string]*template.Template {
@@ -327,9 +328,13 @@ func buildTemplates() map[string]*template.Template {
 }
 
 func main() {
+	fmt.Println("Starting")
 	templates := buildTemplates()
 
+	fmt.Println("Starting CQRS")
 	readmodel, bus := setupCQRS(false) // true to introduce delays
+
+	fmt.Println("Starting Router")
 	rtr := mux.NewRouter()
 	rtr.Use(addReadModel(readmodel))
 	rtr.Use(addTemplates(templates))
@@ -350,5 +355,6 @@ func main() {
 			http.FileServer(http.Dir("./CQRSGui/Content/"))))
 
 	http.Handle("/", rtr)
+	fmt.Println("Starting ListenAndServe")
 	http.ListenAndServe(":8080", nil)
 }

@@ -1,6 +1,9 @@
 package SimpleCQRS
 
-import "errors"
+import (
+	"errors"
+	"sync"
+)
 
 type InventoryItemDetailsDto struct {
 	Id           Guid
@@ -17,6 +20,7 @@ type InventoryItemListDto struct {
 type BSDB struct {
 	list    []InventoryItemListDto
 	details map[Guid]InventoryItemDetailsDto
+	s       sync.RWMutex
 }
 
 func NewBSDB() BSDB {
@@ -41,6 +45,9 @@ func (detail *InventoryItemDetailView) ProcessInventoryItemCreated(e Event) erro
 	if !ok {
 		return errors.New("passed incorrect event")
 	}
+	detail.db.s.Lock()
+	defer detail.db.s.Unlock()
+
 	detail.db.details[evt.Id()] = InventoryItemDetailsDto{evt.Id(), evt.Name(), 0, 0}
 	return nil
 }
@@ -49,6 +56,9 @@ func (detail *InventoryItemDetailView) ProcessInventoryItemDeactivated(e Event) 
 	if !ok {
 		return errors.New("passed incorrect event")
 	}
+	detail.db.s.Lock()
+	defer detail.db.s.Unlock()
+
 	delete(detail.db.details, evt.Id())
 	return nil
 }
@@ -57,6 +67,9 @@ func (detail *InventoryItemDetailView) ProcessInventoryItemRenamed(e Event) erro
 	if !ok {
 		return errors.New("passed incorrect event")
 	}
+	detail.db.s.Lock()
+	defer detail.db.s.Unlock()
+
 	original, ok := detail.db.details[evt.Id()]
 	if !ok {
 		return errors.New("this should never happen")
@@ -71,6 +84,9 @@ func (detail *InventoryItemDetailView) ProcessItemsCheckedInToInventory(e Event)
 	if !ok {
 		return errors.New("passed incorrect event")
 	}
+	detail.db.s.Lock()
+	defer detail.db.s.Unlock()
+
 	original, ok := detail.db.details[evt.Id()]
 	if !ok {
 		return errors.New("this should never happen")
@@ -85,6 +101,9 @@ func (detail *InventoryItemDetailView) ProcessItemsRemovedFromInventory(e Event)
 	if !ok {
 		return errors.New("passed incorrect event")
 	}
+	detail.db.s.Lock()
+	defer detail.db.s.Unlock()
+
 	original, ok := detail.db.details[evt.Id()]
 	if !ok {
 		return errors.New("this should never happen")
@@ -107,6 +126,9 @@ func (list *InventoryItemListView) ProcessInventoryItemCreated(e Event) error {
 	if !ok {
 		return errors.New("passed incorrect event")
 	}
+	list.db.s.Lock()
+	defer list.db.s.Unlock()
+
 	list.db.list = append(list.db.list, InventoryItemListDto{evt.Id(), evt.Name()})
 	return nil
 }
@@ -116,6 +138,9 @@ func (list *InventoryItemListView) ProcessInventoryItemRenamed(e Event) error {
 	if !ok {
 		return errors.New("passed incorrect event")
 	}
+	list.db.s.Lock()
+	defer list.db.s.Unlock()
+
 	for i, item := range list.db.list {
 		if evt.Id() == item.Id {
 			list.db.list[i] = InventoryItemListDto{evt.Id(), evt.NewName()}
@@ -129,6 +154,9 @@ func (list *InventoryItemListView) ProcessInventoryItemDeactivated(e Event) erro
 	if !ok {
 		return errors.New("passed incorrect event")
 	}
+	list.db.s.Lock()
+	defer list.db.s.Unlock()
+
 	newList := make([]InventoryItemListDto, 0)
 	for _, item := range list.db.list {
 		if evt.Id() != item.Id {
@@ -148,10 +176,18 @@ func NewReadModelFacade(db *BSDB) ReadModelFacade {
 }
 
 func (rmf *ReadModelFacade) GetInventoryItems() []InventoryItemListDto {
-	return rmf.db.list
+	rmf.db.s.RLock()
+	defer rmf.db.s.RUnlock()
+
+	tmp := make([]InventoryItemListDto, len(rmf.db.list))
+	copy(tmp, rmf.db.list)
+	return tmp
 }
 
 func (rmf *ReadModelFacade) GetInventoryItemDetails(id Guid) (InventoryItemDetailsDto, error) {
+	rmf.db.s.RLock()
+	defer rmf.db.s.RUnlock()
+
 	item, ok := rmf.db.details[id]
 	if !ok {
 		return item, errors.New("No item")

@@ -16,8 +16,8 @@ type FakeBus struct {
 	induceDelay     bool
 }
 
-func NewFakeBus(induceDelay bool) FakeBus {
-	return FakeBus{
+func NewFakeBus(induceDelay bool) *FakeBus {
+	return &FakeBus{
 		commandHandlers: make(map[reflect.Type]CommandHandler),
 		eventProcessors: make(map[reflect.Type][]EventProcessor),
 		induceDelay:     induceDelay,
