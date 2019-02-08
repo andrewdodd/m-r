@@ -55,7 +55,8 @@ func (r *InventoryCommandHandlers) HandleRenameInventoryItem(m Command) error {
 	message := m.(RenameInventoryItem)
 	ar, _ := r.repo.GetById(message.InventoryItemId)
 	item := ar.(*InventoryItem)
-	time.Sleep(10 * time.Second) // Name changes take ages, not sure why
+	//time.Sleep(10 * time.Second) // Name changes take ages, not sure why
+	time.Sleep(2 * time.Millisecond) // This is short enough to be handled before my next HTTP request (i.e. it "looks" synchronous)
 	err := item.ChangeName(message.NewName)
 	if err != nil {
 		return err
